@@ -1,0 +1,11 @@
+.org 0x10000000
+
+main:
+    li $t0 , 0  # setting $t0 to 0
+    li $t1 , 0xf0200000 # setting $t1 to the memory address of the LEDs
+
+loop:
+    sw $t0 , 0($t1) # store the value of $t0 into the LEDs memory address
+    addiu $t0 , $t0 , 1 # increment $t0 by 1
+    j loop  # jump to the loop 
+    nop # nop after jump
