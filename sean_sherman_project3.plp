@@ -1,0 +1,102 @@
+.org 0x10000000
+# Initializations
+li $sp, 0x10fffffc  
+li $s0, array_ptr #by the end of an input, this stack pointer will be the first element (not empty)
+li $s1, array_ptr #by the end of an input, this stack pointer is for the last element of the array (which will be empty)r
+li $a0, 0
+li $a1, 0xf0000000 # COMMAND (write)
+li $a2, 0xf0000004 # STATUS (read)
+li $a3, 0xf0000008 # RECEIVE (read)
+
+li $t0, 0b10 # value of 2 used for STATUS validation and COMMAND interaction, as a Bit Mask
+li $t1, 0b101110 # 46 is the ASCII value for the '.' char and is thus used to indicate and validate the end of an input string
+li $t4, 1 # ASCII A
+li $t5, 90 # ASCII Z
+li $t7, 32
+
+
+# Initialize any registers you will be using here.
+# It can be helpful to include a comment about a register's purpose
+# next to an initialization at the start of the program for reference.
+j main
+nop
+
+array_ptr:			# Label pointing to 100 word array
+	.space 100 
+main:
+
+lw $t2, 0($a2) # copy value held in status register to t2
+and $t2, $t0, $t2 # mask for the significant bit in the status register
+beq $t0, $t2, add_to_array # Check status register for the value of 2 (indicates receive buffer has new byte)
+nop
+
+j main
+nop
+
+add_to_array:
+lw $t2, 0($a3) # copy value held in receive buffer to t2
+beq $t2, $t7, next_char #no whitespaces are to be saved
+#CHECK FOR .
+beq $t1, $t2, palindrome_check #if the value in the receive buffer is a period, the string is complete and the palindrome check should begin
+nop
+slt $t6, $t2, $t5
+beq $t6, $t4, lower_case
+nop
+#COPY TO ARRAY ELEMENT
+sw $t2, 0($s1) #Copy value from receive buffer to sp array element pointer
+#SIGNAL UART COMMAND REG & PREP FOR NEXT CYCLE
+sw $t0, 0($a1) #Copy a value of 2 to command register to tell the UART to send next byte
+addiu $s1, $s1, 4 #Increment stack pointer to change to next empty array element
+j main
+nop
+
+next_char:
+sw $t0, 0($a1) #Copy a value of 2 to command register to tell the UART to send next byte
+j main
+nop
+
+lower_case:
+addiu, $t6, $t2, 32
+#COPY TO ARRAY ELEMENT
+sw $t6, 0($s1) #Copy value from receive buffer to sp array element pointer
+#SIGNAL UART COMMAND REG & PREP FOR NEXT CYCLE
+sw $t0, 0($a1) #Copy a value of 2 to command register to tell the UART to send next byte
+addiu $s1, $s1, 4 #Increment stack pointer to change to next empty array element
+j main
+nop
+
+palindrome_check:
+sw $t2, 0($s1) #add the period at the end of the array (prevents reading portions of previous strings)
+addiu $s1, $s1, -4 #decrement to next last element of array
+lw $t3, 0($s1) #load value held at pointer to end element to register t3
+lw $t2, 0($s0) #load value held at pointer to begin element to register t2
+bne $t3, $t2, not_palindromic #lack of symmetry indicates not palindrome, exit check
+nop
+beq $s1, $s0, is_palindromic #check if addresses at sp & s0 are same; if so, there aren't more character pairs to evaluate in the string
+nop
+
+addiu $s0, $s0, 4 # increment to next element of array, since there are more character pairs to evaluate
+beq $s1, $s0, is_palindromic #check if addresses at sp & s0 are same after incrementing of smaller pointer. This does the same as in line 54; the purpose of this is to account for words with even character count
+nop
+j palindrome_check
+nop
+
+is_palindromic:
+# make the call to the print function with the value of 1 indicating that the input was a palindrome and therefore result is Yes
+move $a0, $t0
+call project3_print
+li $s0, array_ptr  # reset base pointer
+li $s1, array_ptr # reset pointer to beginning of array for next input string
+sw $t0, 0($a1) #Copy a value of 2 to command register to tell the UART to send next byte
+j main
+nop
+
+not_palindromic:
+# make the call to the print function with the value of 0 indicating that the input was not a palindrome and therefore result is No
+li $a0, 0 #just in case a0 is at 1 from a previous string
+call project3_print
+li $s0, array_ptr # reset base pointer
+li $s1, array_ptr # reset pointer to beginning of array
+sw $t0, 0($a1) #Copy a value of 2 to command register to tell the UART to send next byte
+j main
+nop
