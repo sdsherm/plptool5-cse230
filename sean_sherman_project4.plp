@@ -1,0 +1,52 @@
+.org 0x10000000
+li $sp, 0x10fffffc	# Stack pointer initialization
+li $s0, sseg_lut	# Lookup table address used by sseg_display
+lui $s1, 0xf070	# Interrupt controller register
+lui $s2, 0xf0a0	# Seven segment display
+li $s3, 0xf0200000	# LED Array
+li $s4, 0xf0600000	# Timer
+li $t0, 4294967175
+li $t1, 0b11
+# ****************************
+# TODO: enable interrupts below
+# ****************************
+li $iv, isr 
+sw $t1, 0($s1) # Global Interrupt Enable
+sw $t0, 0($s4) # Set timer value to 100 cycles from overflow
+
+# NOTE: Do not add or modify any code within this main loop
+main:
+	jal sseg_display
+	nop
+	addiu $a0, $a0, 1
+	j main
+	nop
+# ****************************************
+# TODO: add interrupt service routine below
+# ****************************************
+isr:
+	# Either turn the LED array on or off, depending on current state (if on -> off & vice versa)
+	li $i0, 0b11111111 #load value being sent to LED
+	lw $i1, 0($s3) # LED val check
+	bne $i0, $i1, on
+	nop
+	beq $i0, $i1, off
+	nop
+	on:
+		li $i0, 0b11111111
+		sw $i0, 0($s3)
+		j continue
+		nop
+	off:
+		sw $zero 0($s3)
+		j continue
+		nop
+	continue:
+	# Reset Timer
+	li $i0, 4294967175 
+	sw $i0, 0($s4)
+	# Wrap things up
+	li $i0, 0b11
+	sw $zero, 4($s1) #clear the status register
+	jr $ir
+	sw $i0, 0($s1) # Reset mask register
