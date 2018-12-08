@@ -1,0 +1,46 @@
+# main source file
+.org 0x10000000
+li $s0, 0xf0100000 #memory label s0 is the memory address of the switches
+li $s1, 0xf0200000 #memory label s1 is the memory address of the LEDs
+li $s2, 256
+start:
+  li $t2, 1 #register 1 represents the expected value if switch 0 is on as 1
+  li $t3, 255 #value which turns on all LEDs, also represents all switches on
+  sw $t4, 0($s1) # reset the LED mem address to 0
+  lw $t0, 0($s0) # load the value at the switches to register 0
+  
+  beq $t0, $t2, switch0_on # if switch 0 is on, jump to its label
+  nop
+  li $t2, 2 # to check if switch 1 is on  
+  beq $t0, $t2, switch1_on # if switch 1 is on, jump to its label
+  nop
+  li $t2, 4 # to check if switch 2 is on
+  beq $t0, $t2, switch2_on # if switch 2 is on, jump to its label
+  nop
+  li $t2, 8 # to check if switch 3 is on
+  li $t3, 1 # preliminary value to assign LEDs, this is shifted in the switch 3 loop
+  beq $t0, $t2, switch3_on # if switch 3 is on, jump to its label
+  nop
+ j start
+ nop
+switch0_on:
+  sw $t3, 0($s1) # set the appropriate value to be stored in the LED array
+ j start
+ nop
+switch1_on:
+  li $t3, 85 # since switch 1 is on, we can load the appropriate value to register t3
+  sw $t3, 0($s1) # store value from t3 into the LED mem address
+ j start
+ nop
+switch2_on:
+  li $t3, 170 # since switch 2 is on, we can load the appropriate value to register t3
+  sw $t3, 0($s1) # store value from t3 into the LED mem address
+ j start
+ nop
+switch3_on:
+  sw $t3, 0($s1) # storing first LED value from t3
+  sll $t3, $t3, 1 # make t3 now contain t3 shifted once
+  beq $t3, $s2, start # exit function determines when t3 is shifted beyond the last LED value, returns to start to either repeat process or react to different switch
+  nop
+ j switch3_on
+ nop
