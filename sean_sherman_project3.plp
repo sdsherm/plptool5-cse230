@@ -10,7 +10,7 @@ li $a3, 0xf0000008 # RECEIVE (read)
 
 li $t0, 0b10 # value of 2 used for STATUS validation and COMMAND interaction, as a Bit Mask
 li $t1, 0b101110 # 46 is the ASCII value for the '.' char and is thus used to indicate and validate the end of an input string
-li $t4, 1 # ASCII A
+li $t4, 1 # Qualifier to be used with slt & beq when checking case of input chars
 li $t5, 90 # ASCII Z
 li $t7, 32
 
@@ -39,7 +39,7 @@ beq $t2, $t7, next_char #no whitespaces are to be saved
 #CHECK FOR .
 beq $t1, $t2, palindrome_check #if the value in the receive buffer is a period, the string is complete and the palindrome check should begin
 nop
-slt $t6, $t2, $t5
+slt $t6, $t5, $t2
 beq $t6, $t4, lower_case
 nop
 #COPY TO ARRAY ELEMENT
@@ -56,7 +56,7 @@ j main
 nop
 
 lower_case:
-addiu, $t6, $t2, 32
+addiu, $t6, $t2, -32
 #COPY TO ARRAY ELEMENT
 sw $t6, 0($s1) #Copy value from receive buffer to sp array element pointer
 #SIGNAL UART COMMAND REG & PREP FOR NEXT CYCLE
